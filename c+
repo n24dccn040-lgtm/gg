@@ -1,0 +1,49 @@
+
+constexpr auto num_threads = 1; //number of threads
+constexpr auto total_count = 10000055; //total number of iterations
+
+void doCalcs(int total_iterations, int & in_count_result)
+{
+    auto seed = std::random_device{}();
+    auto gen = std::mt19937{ seed };
+    auto dist = std::uniform_real_distribution<>{0, 1};
+
+    auto in_count{ 0 };
+
+    //calculation
+    for (auto counter = 0; counter < total_iterations; ++counter) {
+        auto x = dist(gen);
+        auto y = dist(gen);
+        auto result = std::sqrt(std::pow(x, 2) + std::pow(y, 2));
+        if (result < 1) {
+            ++in_count; //check if the generated value is inside a unit circle
+        }
+    }
+
+    in_count_result = in_count;
+}
+
+int main()
+{
+    std::vector<std::thread> threads(num_threads);
+    std::vector<int> in_count(num_threads);
+    in_count.resize(num_threads);
+
+    for (size_t i = 0; i < num_threads; ++i) {
+        int total_iterations = total_count / num_threads;
+        if (i == 0) {
+            total_iterations += total_count % num_threads; // get the remaining iterations calculated by thread 0
+        }
+
+        threads.emplace_back(doCalcs, total_iterations, std::ref(in_count[i]));
+    }
+
+    for (auto & thread : threads) {
+        if (thread.joinable()) {
+            thread.join();
+        }
+    }
+
+    double pi_value = 4.0 * static_cast<double>(std::accumulate(in_count.begin(), in_count.end(), 0)) / static_cast<double>(total_count);
+    std::cout << "Value of PI is: " << pi_value << std::endl;
+}
